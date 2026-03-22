@@ -13,6 +13,7 @@
             <div class="nav-brand">Task Manager</div>
             <div class="nav-links">
                 <span id="user-name"></span>
+                <button id="admin-btn" onclick="showAdmin()" class="btn btn-outline hidden">Админ</button>
                 <button onclick="logout()" class="btn btn-outline">Выйти</button>
             </div>
         </nav>
@@ -67,13 +68,44 @@
             </div>
         </div>
 
+        <!-- Админ-панель -->
+        <div id="admin-page" class="page hidden">
+            <div class="container">
+                <div class="page-header">
+                    <h2>Админ-панель — Пользователи</h2>
+                    <button onclick="showProjects()" class="btn btn-outline">← К проектам</button>
+                </div>
+                <div id="admin-users-list" class="admin-grid"></div>
+
+                <!-- Проекты выбранного пользователя -->
+                <div id="admin-user-projects" class="hidden" style="margin-top:24px">
+                    <h3 id="admin-user-title"></h3>
+                    <div id="admin-projects-list" class="projects-grid"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Страница задач проекта -->
         <div id="tasks-page" class="page hidden">
             <div class="container">
                 <div class="page-header">
                     <button onclick="showProjects()" class="btn btn-outline">← Назад</button>
                     <h2 id="project-name"></h2>
-                    <button onclick="showCreateTask()" class="btn btn-primary">+ Новая задача</button>
+                    <div>
+                        <button onclick="showMembers()" class="btn btn-outline">Участники</button>
+                        <button onclick="showCreateTask()" class="btn btn-primary">+ Новая задача</button>
+                    </div>
+                </div>
+
+                <!-- Панель участников -->
+                <div id="members-panel" class="card hidden">
+                    <h3>Участники проекта</h3>
+                    <div id="members-list"></div>
+                    <div class="form-row" style="margin-top:12px">
+                        <input type="email" id="member-email" placeholder="Email пользователя">
+                        <button onclick="addMember()" class="btn btn-primary">Пригласить</button>
+                    </div>
+                    <div id="member-error" class="error hidden" style="margin-top:8px"></div>
                 </div>
 
                 <!-- Фильтры -->
@@ -109,6 +141,9 @@
                         </select>
                         <input type="date" id="task-deadline" placeholder="Дедлайн">
                     </div>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="task-private"> Приватная задача (видна только вам)
+                    </label>
                     <div class="form-actions">
                         <button onclick="createTask()" class="btn btn-primary">Создать</button>
                         <button onclick="hideCreateTask()" class="btn btn-outline">Отмена</button>

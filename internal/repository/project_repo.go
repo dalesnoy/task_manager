@@ -5,10 +5,20 @@ import (
 	"task-manager/pkg/database"
 )
 
-// GetProjectsByOwner возвращает все проекты пользователя
+// GetProjectsByOwner возвращает проекты, где пользователь — владелец
 func GetProjectsByOwner(ownerID uint) ([]model.Project, error) {
 	var projects []model.Project
 	err := database.DB.Where("owner_id = ?", ownerID).Find(&projects).Error
+	return projects, err
+}
+
+// GetProjectsByUser возвращает проекты пользователя (свои + где участник)
+func GetProjectsByUser(userID uint) ([]model.Project, error) {
+	var projects []model.Project
+	err := database.DB.Where(
+		"owner_id = ? OR id IN (SELECT project_id FROM project_members WHERE user_id = ?)",
+		userID, userID,
+	).Find(&projects).Error
 	return projects, err
 }
 
@@ -38,6 +48,8 @@ func DeleteProject(id uint) error {
 	database.DB.Where("task_id IN (SELECT id FROM tasks WHERE project_id = ?)", id).Delete(&model.Tag{})
 	// Затем удаляем задачи проекта
 	database.DB.Where("project_id = ?", id).Delete(&model.Task{})
+	// Удаляем участников проекта
+	database.DB.Where("project_id = ?", id).Delete(&model.ProjectMember{})
 	// Удаляем сам проект
 	return database.DB.Delete(&model.Project{}, id).Error
 }

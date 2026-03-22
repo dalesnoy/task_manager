@@ -28,6 +28,7 @@ func main() {
 		&model.Project{},
 		&model.Task{},
 		&model.Tag{},
+		&model.ProjectMember{},
 	)
 	log.Println("Миграция базы данных выполнена")
 
@@ -76,10 +77,23 @@ func main() {
 		protected.PUT("/tasks/:id", handler.UpdateTask)
 		protected.DELETE("/tasks/:id", handler.DeleteTask)
 
+		// Участники проекта
+		protected.GET("/projects/:id/members", handler.GetMembers)
+		protected.POST("/projects/:id/members", handler.AddMember)
+		protected.DELETE("/projects/:id/members/:userId", handler.RemoveMember)
+
 		// Теги
 		protected.GET("/tasks/:id/tags", handler.GetTags)
 		protected.POST("/tasks/:id/tags", handler.CreateTag)
 		protected.DELETE("/tags/:id", handler.DeleteTag)
+
+		// Админ-панель (требует is_admin = true)
+		admin := protected.Group("/admin")
+		admin.Use(middleware.AdminRequired())
+		{
+			admin.GET("/users", handler.AdminGetUsers)
+			admin.GET("/users/:id/projects", handler.AdminGetUserProjects)
+		}
 	}
 
 	// Запускаем сервер

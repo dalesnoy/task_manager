@@ -67,6 +67,13 @@ func AuthRequired() gin.HandlerFunc {
 		userID := uint(claims["user_id"].(float64))
 		c.Set("user_id", userID)
 
+		// Сохраняем флаг админа
+		if isAdmin, ok := claims["is_admin"].(bool); ok {
+			c.Set("is_admin", isAdmin)
+		} else {
+			c.Set("is_admin", false)
+		}
+
 		c.Next()
 	}
 }
@@ -75,4 +82,20 @@ func AuthRequired() gin.HandlerFunc {
 func GetUserID(c *gin.Context) uint {
 	userID, _ := c.Get("user_id")
 	return userID.(uint)
+}
+
+// AdminRequired проверяет, что пользователь — администратор
+func AdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		isAdmin, exists := c.Get("is_admin")
+		if !exists || !isAdmin.(bool) {
+			c.JSON(http.StatusForbidden, model.ErrorResponse{
+				Error: "Доступ только для администраторов",
+				Code:  http.StatusForbidden,
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
 }

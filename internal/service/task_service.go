@@ -27,7 +27,7 @@ func GetTasks(projectID uint, userID uint, filter model.TaskFilter) ([]model.Tas
 		return nil, 0, err
 	}
 
-	return repository.GetTasksByProject(projectID, filter)
+	return repository.GetTasksByProject(projectID, userID, filter)
 }
 
 // GetTask возвращает задачу по ID
@@ -72,6 +72,8 @@ func CreateTask(projectID uint, input model.TaskInput, userID uint) (*model.Task
 		Deadline:    input.Deadline,
 		ProjectID:   projectID,
 		AssigneeID:  input.AssigneeID,
+		IsPrivate:   input.IsPrivate,
+		CreatorID:   userID,
 	}
 
 	if err := repository.CreateTask(&task); err != nil {
@@ -117,6 +119,9 @@ func UpdateTask(id uint, input model.TaskUpdateInput, userID uint) (*model.Task,
 	}
 	if input.AssigneeID != nil {
 		task.AssigneeID = input.AssigneeID
+	}
+	if input.IsPrivate != nil {
+		task.IsPrivate = *input.IsPrivate
 	}
 
 	if err := repository.UpdateTask(task); err != nil {

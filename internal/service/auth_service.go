@@ -52,7 +52,7 @@ func Login(input model.LoginInput) (string, error) {
 	}
 
 	// Генерируем JWT токен
-	token, err := generateToken(user.ID)
+	token, err := generateToken(user.ID, user.IsAdmin)
 	if err != nil {
 		return "", errors.New("ошибка генерации токена")
 	}
@@ -60,11 +60,12 @@ func Login(input model.LoginInput) (string, error) {
 	return token, nil
 }
 
-// generateToken создаёт JWT токен с user_id
-func generateToken(userID uint) (string, error) {
+// generateToken создаёт JWT токен с user_id и is_admin
+func generateToken(userID uint, isAdmin bool) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": userID,
-		"exp":     time.Now().Add(72 * time.Hour).Unix(), // токен живёт 72 часа
+		"user_id":  userID,
+		"is_admin": isAdmin,
+		"exp":      time.Now().Add(72 * time.Hour).Unix(), // токен живёт 72 часа
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

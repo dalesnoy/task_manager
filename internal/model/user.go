@@ -7,6 +7,7 @@ type User struct {
 	Email        string    `json:"email" gorm:"uniqueIndex;not null"`
 	PasswordHash string    `json:"-" gorm:"not null"`
 	Name         string    `json:"name" gorm:"not null"`
+	IsAdmin      bool      `json:"is_admin" gorm:"default:false"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

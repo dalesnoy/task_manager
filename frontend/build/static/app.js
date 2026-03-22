@@ -3,6 +3,8 @@ const API = '/api';
 let token = localStorage.getItem('token');
 let currentProjectId = null;
 let currentProjectTitle = '';
+let currentUserId = null;
+let isAdmin = false;
 
 // === Утилиты ===
 function api(method, path, body) {
@@ -72,10 +74,14 @@ async function login(e, emailOverride, passwordOverride) {
         token = data.token;
         localStorage.setItem('token', token);
 
-        // Декодируем имя из токена (простой base64 decode payload)
+        // Декодируем данные из токена (простой base64 decode payload)
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
+            currentUserId = payload.user_id;
+            isAdmin = payload.is_admin || false;
             document.getElementById('user-name').textContent = email;
+            // Показываем кнопку админ-панели
+            document.getElementById('admin-btn').classList.toggle('hidden', !isAdmin);
         } catch(_) {}
 
         document.getElementById('navbar').classList.remove('hidden');
@@ -204,9 +210,11 @@ function taskCard(task) {
     if (task.status !== 'in_progress') statusButtons.push(`<button onclick="changeStatus(${task.id},'in_progress')">В работу</button>`);
     if (task.status !== 'done') statusButtons.push(`<button onclick="changeStatus(${task.id},'done')">Готово</button>`);
 
+    const privateIcon = task.is_private ? '<span class="private-badge" title="Приватная задача">🔒</span>' : '';
+
     return `
-        <div class="task-card">
-            <h4>${escapeHtml(task.title)}</h4>
+        <div class="task-card ${task.is_private ? 'task-private' : ''}">
+            <h4>${privateIcon}${escapeHtml(task.title)}</h4>
             ${task.description ? `<div class="task-desc">${escapeHtml(task.description)}</div>` : ''}
             <div class="task-meta">
                 <span class="priority-badge priority-${task.priority}">${task.priority}</span>
@@ -230,6 +238,7 @@ function hideCreateTask() {
     document.getElementById('task-title').value = '';
     document.getElementById('task-desc').value = '';
     document.getElementById('task-deadline').value = '';
+    document.getElementById('task-private').checked = false;
 }
 
 async function createTask() {
@@ -240,6 +249,7 @@ async function createTask() {
         title,
         description: document.getElementById('task-desc').value,
         priority: document.getElementById('task-priority').value,
+        is_private: document.getElementById('task-private').checked,
     };
 
     const deadline = document.getElementById('task-deadline').value;
@@ -275,6 +285,127 @@ async function deleteTask(id) {
     }
 }
 
+// === Участники проекта ===
+async function showMembers() {
+    const panel = document.getElementById('members-panel');
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden')) {
+        await loadMembers();
+    }
+}
+
+async function loadMembers() {
+    try {
+        const members = await api('GET', `/projects/${currentProjectId}/members`);
+        const list = document.getElementById('members-list');
+        if (!members || members.length === 0) {
+            list.innerHTML = '<p style="color:#888;font-size:13px">Нет участников</p>';
+            return;
+        }
+
+        // Определяем, является ли текущий пользователь владельцем
+        const isOwner = members.length > 0 && members[0].role === 'owner' && members[0].user_id === currentUserId;
+
+        list.innerHTML = members.map(m => {
+            const roleLabel = m.role === 'owner' ? 'владелец' : 'участник';
+            const removeBtn = (isOwner && m.role !== 'owner')
+                ? `<button class="btn btn-danger btn-sm" onclick="removeMember(${m.user_id})">Удалить</button>`
+                : '';
+            return `
+                <div class="member-item">
+                    <span>${escapeHtml(m.user.name || m.user.email)} <small>(${roleLabel})</small></span>
+                    ${removeBtn}
+                </div>
+            `;
+        }).join('');
+
+        // Форму приглашения показываем только владельцу
+        const inviteForm = document.querySelector('#members-panel .form-row');
+        if (inviteForm) {
+            inviteForm.style.display = isOwner ? 'flex' : 'none';
+        }
+    } catch (err) {
+        showError('member-error', err.message);
+    }
+}
+
+async function addMember() {
+    const email = document.getElementById('member-email').value;
+    if (!email) return;
+    try {
+        await api('POST', `/projects/${currentProjectId}/members`, { email });
+        document.getElementById('member-email').value = '';
+        loadMembers();
+    } catch (err) {
+        showError('member-error', err.message);
+    }
+}
+
+async function removeMember(userId) {
+    if (!confirm('Удалить участника из проекта?')) return;
+    try {
+        await api('DELETE', `/projects/${currentProjectId}/members/${userId}`);
+        loadMembers();
+    } catch (err) {
+        showError('member-error', err.message);
+    }
+}
+
+// === Админ-панель ===
+async function showAdmin() {
+    showPage('admin');
+    try {
+        const users = await api('GET', '/admin/users');
+        const list = document.getElementById('admin-users-list');
+        document.getElementById('admin-user-projects').classList.add('hidden');
+
+        if (!users || users.length === 0) {
+            list.innerHTML = '<p style="color:#888;text-align:center;padding:40px">Нет пользователей</p>';
+            return;
+        }
+
+        list.innerHTML = users.map(u => `
+            <div class="admin-user-card" onclick="showUserProjects(${u.id}, '${escapeHtml(u.name || u.email)}')">
+                <div class="admin-user-info">
+                    <h4>${escapeHtml(u.name)}</h4>
+                    <p>${escapeHtml(u.email)}</p>
+                </div>
+                <div class="admin-user-meta">
+                    <span class="${u.is_admin ? 'role-admin' : 'role-user'}">${u.is_admin ? 'Админ' : 'Пользователь'}</span>
+                    <small>Регистрация: ${formatDate(u.created_at)}</small>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function showUserProjects(userId, userName) {
+    try {
+        const projects = await api('GET', `/admin/users/${userId}/projects`);
+        const container = document.getElementById('admin-user-projects');
+        const list = document.getElementById('admin-projects-list');
+        document.getElementById('admin-user-title').textContent = 'Проекты: ' + userName;
+        container.classList.remove('hidden');
+
+        if (!projects || projects.length === 0) {
+            list.innerHTML = '<p style="color:#888;padding:16px">Нет проектов</p>';
+            return;
+        }
+
+        list.innerHTML = projects.map(p => `
+            <div class="project-card" onclick="openProject(${p.id}, '${escapeHtml(p.title)}')">
+                <h3>${escapeHtml(p.title)}</h3>
+                <p>${escapeHtml(p.description || 'Без описания')}</p>
+                <div class="meta">Создан: ${formatDate(p.created_at)}</div>
+            </div>
+        `).join('');
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
 // === Защита от XSS ===
 function escapeHtml(text) {
     if (!text) return '';
@@ -285,6 +416,12 @@ function escapeHtml(text) {
 
 // === Инициализация ===
 if (token) {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        currentUserId = payload.user_id;
+        isAdmin = payload.is_admin || false;
+        document.getElementById('admin-btn').classList.toggle('hidden', !isAdmin);
+    } catch(_) {}
     document.getElementById('navbar').classList.remove('hidden');
     showProjects();
 } else {
