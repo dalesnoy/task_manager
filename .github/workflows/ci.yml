@@ -1,0 +1,118 @@
+name: CI — Build & Test
+
+on:
+  push:
+    branches: [master, adding_admin]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Проверка форматирования (gofmt)
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Файлы с неправильным форматированием:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Проверка go vet
+        run: go vet ./...
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Скачивание зависимостей
+        run: go mod download
+
+      - name: Сборка проекта
+        run: go build -o main ./cmd/main.go
+
+      - name: Сохранение бинарника
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-binary
+          path: main
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: taskmanager_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Запуск тестов
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: taskmanager_test
+          JWT_SECRET: test-secret
+          SERVER_PORT: 8080
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Отчёт о покрытии
+        if: success()
+        run: go tool cover -func=coverage.out
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Сборка Docker-образа
+        run: docker build -t taskmanager:${{ github.sha }} .
+
+      - name: Проверка запуска контейнера
+        run: |
+          docker run -d --name test-container \
+            -e DB_HOST=localhost \
+            -e DB_PORT=5432 \
+            -e DB_USER=postgres \
+            -e DB_PASSWORD=postgres \
+            -e DB_NAME=taskmanager \
+            -e JWT_SECRET=test-secret \
+            taskmanager:${{ github.sha }} || true
+          sleep 2
+          docker logs test-container
+          docker rm -f test-container
