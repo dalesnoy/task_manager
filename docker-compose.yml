@@ -1,0 +1,37 @@
+name: taskmanager
+
+services:
+  # PostgreSQL база данных
+  db:
+    image: postgres:15-alpine
+    container_name: taskmanager-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: taskmanager
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # Go API сервер
+  app:
+    build: .
+    container_name: taskmanager-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: taskmanager
+      SERVER_PORT: 8080
+      JWT_SECRET: my-super-secret-key-change-me
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Навигация -->
+        <nav id="navbar" class="navbar hidden">
+            <div class="nav-brand">Task Manager</div>
+            <div class="nav-links">
+                <span id="user-name"></span>
+                <button onclick="logout()" class="btn btn-outline">Выйти</button>
+            </div>
+        </nav>
+
+        <!-- Страница авторизации -->
+        <div id="auth-page" class="page">
+            <div class="auth-container">
+                <h1>Task Manager</h1>
+                <p class="subtitle">Система управления задачами</p>
+
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab('login')">Вход</button>
+                    <button class="tab" onclick="showTab('register')">Регистрация</button>
+                </div>
+
+                <form id="login-form" onsubmit="login(event)">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-password" placeholder="Пароль" required>
+                    <button type="submit" class="btn btn-primary">Войти</button>
+                </form>
+
+                <form id="register-form" class="hidden" onsubmit="register(event)">
+                    <input type="text" id="register-name" placeholder="Имя" required>
+                    <input type="email" id="register-email" placeholder="Email" required>
+                    <input type="password" id="register-password" placeholder="Пароль (мин. 6 символов)" required minlength="6">
+                    <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+                </form>
+
+                <div id="auth-error" class="error hidden"></div>
+            </div>
+        </div>
+
+        <!-- Страница проектов -->
+        <div id="projects-page" class="page hidden">
+            <div class="container">
+                <div class="page-header">
+                    <h2>Мои проекты</h2>
+                    <button onclick="showCreateProject()" class="btn btn-primary">+ Новый проект</button>
+                </div>
+
+                <div id="create-project-form" class="card hidden">
+                    <h3>Новый проект</h3>
+                    <input type="text" id="project-title" placeholder="Название проекта" required>
+                    <textarea id="project-desc" placeholder="Описание (необязательно)"></textarea>
+                    <div class="form-actions">
+                        <button onclick="createProject()" class="btn btn-primary">Создать</button>
+                        <button onclick="hideCreateProject()" class="btn btn-outline">Отмена</button>
+                    </div>
+                </div>
+
+                <div id="projects-list" class="projects-grid"></div>
+            </div>
+        </div>
+
+        <!-- Страница задач проекта -->
+        <div id="tasks-page" class="page hidden">
+            <div class="container">
+                <div class="page-header">
+                    <button onclick="showProjects()" class="btn btn-outline">← Назад</button>
+                    <h2 id="project-name"></h2>
+                    <button onclick="showCreateTask()" class="btn btn-primary">+ Новая задача</button>
+                </div>
+
+                <!-- Фильтры -->
+                <div class="filters">
+                    <select id="filter-status" onchange="loadTasks()">
+                        <option value="">Все статусы</option>
+                        <option value="todo">К выполнению</option>
+                        <option value="in_progress">В работе</option>
+                        <option value="done">Готово</option>
+                    </select>
+                    <select id="filter-priority" onchange="loadTasks()">
+                        <option value="">Все приоритеты</option>
+                        <option value="high">Высокий</option>
+                        <option value="medium">Средний</option>
+                        <option value="low">Низкий</option>
+                    </select>
+                    <select id="filter-sort" onchange="loadTasks()">
+                        <option value="created_at">По дате</option>
+                        <option value="deadline">По дедлайну</option>
+                        <option value="priority">По приоритету</option>
+                    </select>
+                </div>
+
+                <div id="create-task-form" class="card hidden">
+                    <h3>Новая задача</h3>
+                    <input type="text" id="task-title" placeholder="Название задачи" required>
+                    <textarea id="task-desc" placeholder="Описание"></textarea>
+                    <div class="form-row">
+                        <select id="task-priority">
+                            <option value="low">Низкий</option>
+                            <option value="medium" selected>Средний</option>
+                            <option value="high">Высокий</option>
+                        </select>
+                        <input type="date" id="task-deadline" placeholder="Дедлайн">
+                    </div>
+                    <div class="form-actions">
+                        <button onclick="createTask()" class="btn btn-primary">Создать</button>
+                        <button onclick="hideCreateTask()" class="btn btn-outline">Отмена</button>
+                    </div>
+                </div>
+
+                <!-- Доска задач -->
+                <div class="task-board">
+                    <div class="task-column">
+                        <h3 class="column-title todo">К выполнению</h3>
+                        <div id="tasks-todo" class="task-list"></div>
+                    </div>
+                    <div class="task-column">
+                        <h3 class="column-title in-progress">В работе</h3>
+                        <div id="tasks-in-progress" class="task-list"></div>
+                    </div>
+                    <div class="task-column">
+                        <h3 class="column-title done">Готово</h3>
+                        <div id="tasks-done" class="task-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
