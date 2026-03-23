@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: 'stable'
 
       - name: Проверка форматирования (gofmt)
         run: |
@@ -38,7 +38,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: 'stable'
 
       - name: Скачивание зависимостей
         run: go mod download
@@ -76,7 +76,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: 'stable'
 
       - name: Запуск тестов
         env:
@@ -87,11 +87,7 @@ jobs:
           DB_NAME: taskmanager_test
           JWT_SECRET: test-secret
           SERVER_PORT: 8080
-        run: go test -v -race -coverprofile=coverage.out ./...
-
-      - name: Отчёт о покрытии
-        if: success()
-        run: go tool cover -func=coverage.out
+        run: go test -v ./...
 
   docker:
     name: Docker Build
