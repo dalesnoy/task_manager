@@ -29,3 +29,10 @@ func GetUserByID(id uint) (*model.User, error) {
 	}
 	return &user, nil
 }
+
+// GetAllUsers возвращает всех пользователей
+func GetAllUsers() ([]model.User, error) {
+	var users []model.User
+	err := database.DB.Order("created_at DESC").Find(&users).Error
+	return users, err
+}

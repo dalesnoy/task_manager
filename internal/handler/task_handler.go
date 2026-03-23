@@ -70,6 +70,14 @@ func GetTask(c *gin.Context) {
 		c.JSON(http.StatusNotFound, model.ErrorResponse{Error: err.Error(), Code: 404})
 		return
 	}
+
+	// Приватную задачу может видеть только создатель
+	userID := middleware.GetUserID(c)
+	if task.IsPrivate && task.CreatorID != userID {
+		c.JSON(http.StatusForbidden, model.ErrorResponse{Error: "нет доступа к этой задаче", Code: 403})
+		return
+	}
+
 	c.JSON(http.StatusOK, task)
 }
 

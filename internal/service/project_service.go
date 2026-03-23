@@ -7,9 +7,9 @@ import (
 	"task-manager/internal/repository"
 )
 
-// GetProjects возвращает все проекты пользователя
+// GetProjects возвращает все проекты пользователя (свои + где участник)
 func GetProjects(userID uint) ([]model.Project, error) {
-	return repository.GetProjectsByOwner(userID)
+	return repository.GetProjectsByUser(userID)
 }
 
 // GetProject возвращает проект по ID с проверкой прав
@@ -19,7 +19,7 @@ func GetProject(id uint, userID uint) (*model.Project, error) {
 		return nil, errors.New("проект не найден")
 	}
 
-	if project.OwnerID != userID {
+	if project.OwnerID != userID && !repository.IsProjectMember(id, userID) {
 		return nil, errors.New("нет доступа к этому проекту")
 	}
 

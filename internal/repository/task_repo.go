@@ -6,11 +6,13 @@ import (
 )
 
 // GetTasksByProject возвращает задачи проекта с фильтрацией и пагинацией
-func GetTasksByProject(projectID uint, filter model.TaskFilter) ([]model.Task, int64, error) {
+// userID используется для фильтрации приватных задач
+func GetTasksByProject(projectID uint, userID uint, filter model.TaskFilter) ([]model.Task, int64, error) {
 	var tasks []model.Task
 	var total int64
 
-	query := database.DB.Where("project_id = ?", projectID)
+	// Показываем публичные задачи + приватные задачи текущего пользователя
+	query := database.DB.Where("project_id = ? AND (is_private = false OR creator_id = ?)", projectID, userID)
 
 	// Фильтрация по статусу
 	if filter.Status != "" {
